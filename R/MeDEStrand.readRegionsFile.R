@@ -104,8 +104,10 @@ MeDEStrand.getPairedGRange <-
 function (fileName, path = NULL, extend, shift, chr.select = NULL, 
     dataset = NULL, uniq = 1e-3, ROI = NULL, isSecondaryAlignment = FALSE, simpleCigar=TRUE) 
 {
-    ext = substr(fileName, nchar(fileName) - 3, nchar(fileName))
+    #ext = substr(fileName, nchar(fileName) - 3, nchar(fileName))
+    ext = sub(pattern = ".*\\.(.*)$", replacement = ".\\1", basename(fileName))
     bam = (ext == ".bam" | ext == ".BAM")
+    bedpe = (ext == ".bedpe" | ext == ".BEDPE")
     bamindex = bam & file.exists(paste(path, "/", fileName, ".bai", 
         sep = ""))
     if (bam) {
@@ -145,8 +147,14 @@ function (fileName, path = NULL, extend, shift, chr.select = NULL,
         regions = do.call(rbind, lapply(regions, as.data.frame, 
             stringsAsFactors = F))
     }
+    else if (bedpe) {
+        cat("Reading bedpe file: ", fileName, "\n")
+        regions =
+            read.table(file = paste(path, fileName, sep = "/"), header = F, sep = "\t")
+            colnames(regions) = c("rname","strand","pos","qwidth","mpos","isize")
+    } 
     else {
-        stop("BED files in paired end mode not supported.\n")
+        stop("Neither .bam or .bedpe file given.\n")
     }
     if (!is.null(chr.select) & !bamindex) {
         cat("Selecting", chr.select, "\n")
@@ -155,9 +163,17 @@ function (fileName, path = NULL, extend, shift, chr.select = NULL,
     }
     cat("Total number of imported first mate reads in properly mapped pairs: ", 
         nrow(regions), "\n", sep = "")
-    cat("scanBamFlag: isPaired = T, isProperPair=TRUE , hasUnmappedMate=FALSE, ", 
-        "isUnmappedQuery = F, isFirstMateRead = T, isSecondMateRead = F\n", 
-        sep = "")
+    if (bam) {
+        cat("scanBamFlag: isPaired = T, isProperPair=TRUE , hasUnmappedMate=FALSE, ",
+            "isUnmappedQuery = F, isFirstMateRead = T, isSecondMateRead = F\n",
+            sep = "")
+    } 
+    else if (bedpe) {
+        cat ("bedpe should have been pre-filtered with: ",
+            "isPaired = TRUE, isProperPair=TRUE, ",
+            "hasUnmappedMate=FALSE, isUnmappedQuery = FALSE, ",
+            "isFirstMateRead = TRUE, isSecondMateRead = FALSE")
+    }
     cat("Mean insertion size: ", mean(abs(regions$isize)), " nt\n", 
         sep = "")
     cat("SD of the insertion size: ", sd(abs(regions$isize)), 
