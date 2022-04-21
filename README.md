@@ -1,4 +1,4 @@
-# MeDEStrand
+# MeDEStrandBEDPE
 R package MeDEStrand (bedpe input available)
 
 ## Full .bedpe file structure
